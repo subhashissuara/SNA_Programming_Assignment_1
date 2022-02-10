@@ -11,17 +11,17 @@ import numpy as np
 import random
 
 # ---------- EDIT BELOW THIS LINE ----------
-number_of_nodes = 1000
+number_of_nodes = 10
 gnp_p_probability = 0.5
 # ---------- EDIT ABOVE THIS LINE ----------
 
 def single_source_shortest_path(G, s):
-    S = []
-    P = {}
+    S = [] # list of nodes reached during traversal
+    P = {} # predecessors, keyed by child node
+    D = {} # distances
+    sigma = dict.fromkeys(G, 0.0) # number of paths to root going through the node (indexed by node) 
     for v in G:
         P[v] = []
-    sigma = dict.fromkeys(G, 0.0) 
-    D = {}
     sigma[s] = 1.0
     D[s] = 0
     Q = [s]
@@ -40,23 +40,6 @@ def single_source_shortest_path(G, s):
                 sigma[w] += sigmav
                 P[w].append(v) 
     return S, P, sigma, D
-
-def accumulate(betweenness, S, P, sigma, s):
-    delta = dict.fromkeys(S, 0)
-    while S:
-        w = S.pop()
-        coefficient = (1 + delta[w]) / sigma[w]
-        for v in P[w]:
-            delta[v] += sigma[v] * coefficient
-        if w != s:
-            betweenness[w] += delta[w]
-    return betweenness, delta
-
-def rescale(betweenness, n):
-    scale = 0.5
-    for v in betweenness:
-        betweenness[v] *= scale
-    return betweenness
 
 def single_shortest_path_length(adj, firstlevel):
     seen = {} 
@@ -124,11 +107,17 @@ def betweenness_centrality(G):
     betweenness = dict.fromkeys(G, 0.0)
     for s in G:
         S, P, sigma, _ = single_source_shortest_path(G, s)
-        betweenness, delta = accumulate(betweenness, S, P, sigma, s)
-    betweenness = rescale(betweenness, len(G))
+        delta = dict.fromkeys(S, 0) # unnormalized betweenness
+        while S:
+            w = S.pop()
+            coefficient = (1 + delta[w]) / sigma[w]
+            for v in P[w]:
+                delta[v] += sigma[v] * coefficient
+            if w != s:
+                betweenness[w] += delta[w]
 
     for key, value in betweenness.items():
-        betweenness[key] = value / (number_of_nodes - 1)
+        betweenness[key] = value * (2 / (number_of_nodes - 1) * (number_of_nodes - 2))
 
     return betweenness
 
@@ -138,7 +127,7 @@ def eigenvector_centrality(G):
     """
     eigen_centrality = {}
     adj = nx.to_numpy_matrix(G)
-    w, v = np.linalg.eig(adj) # Eigens
+    w, v = np.linalg.eig(adj) # w = eigenvalues, v = eigenvectors
     index_max_abs = (np.abs(max(w, key=abs))).argmax()
     for n in G.nodes:
         eigen_centrality[n] = abs(v[n, index_max_abs])
@@ -203,59 +192,65 @@ def main():
     eigenvector_centrality_dict = eigenvector_centrality(random_graph)
     pagerank_centrality_dict = pagerank_centrality(random_graph)
 
+    # print("Degree Centrality: ", degree_centrality_dict)
+    # print("Betweenness Centrality: ", betweenness_centrality_dict)
+    # print("Closeness Centrality: ", closeness_centrality_dict)
+    # print("Eigenvector Centrality: ", eigenvector_centrality_dict)
+    # print("Pagerank Centrality: ", pagerank_centrality_dict)
+
     ########## GRAPHS ##########
-    # plt.xlabel("Centrality")
-    # plt.ylabel('Number of Nodes')
+    plt.xlabel("Centrality")
+    plt.ylabel('Number of Nodes')
 
-    # # Degree centrality
-    # centrality = []
-    # num_of_nodes = []
-    # for key, value in degree_centrality_dict.items():
-    #     num_of_nodes.append(key)
-    #     centrality.append(value)
-    # plt.plot(centrality, num_of_nodes, label = 'Degree Centrality')
+    # Degree centrality
+    centrality = []
+    num_of_nodes = []
+    for key, value in degree_centrality_dict.items():
+        num_of_nodes.append(key)
+        centrality.append(value)
+    plt.plot(centrality, num_of_nodes, label = 'Degree Centrality')
 
-    # # Betweenness centrality
-    # centrality = []
-    # num_of_nodes = []
-    # for key, value in betweenness_centrality_dict.items():
-    #     num_of_nodes.append(key)
-    #     centrality.append(value)
+    # Betweenness centrality
+    centrality = []
+    num_of_nodes = []
+    for key, value in betweenness_centrality_dict.items():
+        num_of_nodes.append(key)
+        centrality.append(value)
     
-    # plt.plot(centrality, num_of_nodes, label = 'Betweenness Centrality')
+    plt.plot(centrality, num_of_nodes, label = 'Betweenness Centrality')
 
-    # # Closeness centrality
-    # centrality = []
-    # num_of_nodes = []
-    # for key, value in closeness_centrality_dict.items():
-    #     num_of_nodes.append(key)
-    #     centrality.append(value)
+    # Closeness centrality
+    centrality = []
+    num_of_nodes = []
+    for key, value in closeness_centrality_dict.items():
+        num_of_nodes.append(key)
+        centrality.append(value)
     
-    # plt.plot(centrality, num_of_nodes, label = 'Closeness Centrality')
+    plt.plot(centrality, num_of_nodes, label = 'Closeness Centrality')
 
-    # # Eigenvector centrality
-    # centrality = []
-    # num_of_nodes = []
-    # for key, value in eigenvector_centrality_dict.items():
-    #     num_of_nodes.append(key)
-    #     centrality.append(value)
+    # Eigenvector centrality
+    centrality = []
+    num_of_nodes = []
+    for key, value in eigenvector_centrality_dict.items():
+        num_of_nodes.append(key)
+        centrality.append(value)
 
-    # plt.plot(centrality, num_of_nodes, label = 'Eigenvector Centrality')
+    plt.plot(centrality, num_of_nodes, label = 'Eigenvector Centrality')
 
-    # # Pagerank centrality
-    # centrality = []
-    # num_of_nodes = []
-    # for key, value in pagerank_centrality_dict.items():
-    #     num_of_nodes.append(key)
-    #     centrality.append(value)
+    # Pagerank centrality
+    centrality = []
+    num_of_nodes = []
+    for key, value in pagerank_centrality_dict.items():
+        num_of_nodes.append(key)
+        centrality.append(value)
     
-    # plt.plot(centrality, num_of_nodes, label = 'Pagerank Centrality')
+    plt.plot(centrality, num_of_nodes, label = 'Pagerank Centrality')
 
-    # plt.xlim((0, 1))
-    # plt.legend()
-    # plt.show()
+    plt.xlim((0, 1))
+    plt.legend()
+    plt.show()
 
-    # clustering_coefficient(random_graph)
+    clustering_coefficient(random_graph)
 
     ########## TOP 5 NODES WITH HIGHEST CENTRALITY ##########
     print("Top 5 nodes with highest degree centrality:", list(dict(sorted(degree_centrality_dict.items(), key=operator.itemgetter(1), reverse=True)[:5]).keys()))
